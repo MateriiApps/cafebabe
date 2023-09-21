@@ -34,8 +34,8 @@ macro_rules! assert_validate_fails {
 
 // Helper for creating the smart pointer types (RefCell, ConstantPoolRef,
 // Rc) required to nest ConstantPoolEntry instances.
-fn wrap(entry: ConstantPoolEntry) -> RefCell<ConstantPoolRef> {
-    RefCell::new(ConstantPoolRef::Resolved(Rc::new(entry)))
+fn wrap(entry: ConstantPoolEntry) -> RwLock<ConstantPoolRef> {
+    RwLock::new(ConstantPoolRef::Resolved(Arc::new(entry)))
 }
 
 #[test]

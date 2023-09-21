@@ -1,4 +1,7 @@
 /target
 Cargo.lock
 
+.idea
+*.iml
+
 tests/parse/tgz/openjdk16.0.1-modules

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::convert::TryFrom;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::constant_pool::{
     get_cp_loadable, read_cp_classinfo, read_cp_invokedynamic, read_cp_memberref,
@@ -216,7 +216,7 @@ pub struct ByteCode<'a> {
 impl<'a> ByteCode<'a> {
     pub(crate) fn from(
         code: &'a [u8],
-        pool: &[Rc<ConstantPoolEntry<'a>>],
+        pool: &[Arc<ConstantPoolEntry<'a>>],
     ) -> Result<Self, ParseError> {
         let bytecode = Self {
             opcodes: read_opcodes(code, pool)?,
@@ -311,7 +311,7 @@ impl<'a> ByteCode<'a> {
 
 fn read_opcodes<'a>(
     code: &'a [u8],
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<(usize, Opcode<'a>)>, ParseError> {
     let mut opcodes = Vec::new();
     let mut ix = 0;

@@ -1,6 +1,6 @@
 use std::borrow::Cow;
 use std::ops::Deref;
-use std::rc::Rc;
+use std::sync::Arc;
 
 use crate::bytecode::ByteCode;
 use crate::constant_pool::{
@@ -367,7 +367,7 @@ fn ensure_length(length: usize, expected: usize) -> Result<(), ParseError> {
 fn read_code_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
     opts: &ParseOptions,
 ) -> Result<CodeData<'a>, ParseError> {
     let max_stack = read_u2(bytes, ix)?;
@@ -416,7 +416,7 @@ fn read_code_data<'a>(
 fn read_stackmaptable_verification<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<VerificationType<'a>, ParseError> {
     let verification_type = match read_u1(bytes, ix)? {
         0 => VerificationType::Top,
@@ -443,7 +443,7 @@ fn read_stackmaptable_verification<'a>(
 fn read_stackmaptable_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<StackMapEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut stackmapframes = Vec::with_capacity(count.into());
@@ -536,7 +536,7 @@ fn read_stackmaptable_data<'a>(
 fn read_exceptions_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<Cow<'a, str>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut exceptions = Vec::with_capacity(count.into());
@@ -551,7 +551,7 @@ fn read_exceptions_data<'a>(
 fn read_innerclasses_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<InnerClassEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut innerclasses = Vec::with_capacity(count.into());
@@ -590,7 +590,7 @@ fn read_linenumber_data(bytes: &[u8], ix: &mut usize) -> Result<Vec<LineNumberEn
 fn read_localvariable_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<LocalVariableEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut localvariables = Vec::with_capacity(count.into());
@@ -621,7 +621,7 @@ fn read_localvariable_data<'a>(
 fn read_localvariabletype_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<LocalVariableTypeEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut localvariabletypes = Vec::with_capacity(count.into());
@@ -649,7 +649,7 @@ fn read_localvariabletype_data<'a>(
 fn read_annotation_element_value<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<AnnotationElementValue<'a>, ParseError> {
     let value = match read_u1(bytes, ix)? as char {
         'B' => AnnotationElementValue::ByteConstant(read_cp_integer(bytes, ix, pool)?),
@@ -699,7 +699,7 @@ fn read_annotation_element_value<'a>(
 fn read_annotation<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Annotation<'a>, ParseError> {
     let type_descriptor =
         read_cp_utf8(bytes, ix, pool).map_err(|e| err!(e, "type descriptor field"))?;
@@ -723,7 +723,7 @@ fn read_annotation<'a>(
 fn read_annotation_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<Annotation<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut annotations = Vec::with_capacity(count.into());
@@ -737,7 +737,7 @@ fn read_annotation_data<'a>(
 fn read_parameter_annotation_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<ParameterAnnotation<'a>>, ParseError> {
     let count = read_u1(bytes, ix)?;
     let mut parameters = Vec::with_capacity(count.into());
@@ -758,7 +758,7 @@ fn read_parameter_annotation_data<'a>(
 fn read_type_annotation_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<TypeAnnotation<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut annotations = Vec::with_capacity(count.into());
@@ -844,7 +844,7 @@ fn read_type_annotation_data<'a>(
 fn read_bootstrapmethods_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<BootstrapMethodEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut bootstrapmethods = Vec::with_capacity(count.into());
@@ -866,7 +866,7 @@ fn read_bootstrapmethods_data<'a>(
 fn read_methodparameters_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<MethodParameterEntry<'a>>, ParseError> {
     let count = read_u1(bytes, ix)?;
     let mut methodparameters = Vec::with_capacity(count.into());
@@ -886,7 +886,7 @@ fn read_methodparameters_data<'a>(
 fn read_module_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<ModuleData<'a>, ParseError> {
     let name = read_cp_moduleinfo(bytes, ix, pool).map_err(|e| err!(e, "name"))?;
     let access_flags = ModuleAccessFlags::from_bits(read_u2(bytes, ix)?)
@@ -987,7 +987,7 @@ fn read_module_data<'a>(
 fn read_modulepackages_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<Cow<'a, str>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut packages = Vec::with_capacity(count.into());
@@ -1001,7 +1001,7 @@ fn read_modulepackages_data<'a>(
 fn read_nestmembers_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<Cow<'a, str>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut members = Vec::with_capacity(count.into());
@@ -1014,7 +1014,7 @@ fn read_nestmembers_data<'a>(
 fn read_permitted_subclasses_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Vec<Cow<'a, str>>, ParseError> {
     let count = read_u2(bytes, ix)?;
     let mut permitted_subclasses = Vec::with_capacity(count.into());
@@ -1029,7 +1029,7 @@ fn read_permitted_subclasses_data<'a>(
 fn read_record_data<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
     opts: &ParseOptions,
 ) -> Result<Vec<RecordComponentEntry<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
@@ -1058,7 +1058,7 @@ fn read_record_data<'a>(
 pub(crate) fn read_attributes<'a>(
     bytes: &'a [u8],
     ix: &mut usize,
-    pool: &[Rc<ConstantPoolEntry<'a>>],
+    pool: &[Arc<ConstantPoolEntry<'a>>],
     opts: &ParseOptions,
 ) -> Result<Vec<AttributeInfo<'a>>, ParseError> {
     let count = read_u2(bytes, ix)?;
