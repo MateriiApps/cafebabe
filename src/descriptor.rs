@@ -16,7 +16,7 @@ pub struct MethodDescriptor<'a> {
 }
 
 impl<'a> MethodDescriptor<'a> {
-    pub(crate) fn parse(chars: &Cow<'a, str>) -> Result<Self, ParseError> {
+    pub fn parse(chars: &Cow<'a, str>) -> Result<Self, ParseError> {
         let mut chars_idx = chars.char_indices();
         match chars_idx.next().map(|(_, ch)| ch) {
             Some('(') => (),
