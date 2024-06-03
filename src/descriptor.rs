@@ -81,7 +81,7 @@ pub enum FieldType<'a> {
 }
 
 impl<'a> FieldType<'a> {
-    pub(crate) fn parse(chars: &Cow<'a, str>) -> Result<Self, ParseError> {
+    pub fn parse(chars: &Cow<'a, str>) -> Result<Self, ParseError> {
         let mut chars_idx = chars.char_indices();
         Self::parse_from_chars_idx(chars, &mut chars_idx)
     }
