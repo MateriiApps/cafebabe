@@ -12,7 +12,8 @@ use crate::constant_pool::{
 use crate::constant_pool::{
     BootstrapArgument, ConstantPoolEntry, LiteralConstant, MethodHandle, NameAndType,
 };
-use crate::names::{is_field_descriptor, is_return_descriptor, is_unqualified_name};
+use crate::descriptor::FieldType;
+use crate::names::{is_return_descriptor, is_unqualified_name};
 use crate::{read_u1, read_u2, read_u4, AccessFlags, ParseError, ParseOptions};
 
 #[derive(Debug)]
@@ -104,7 +105,7 @@ pub struct LocalVariableEntry<'a> {
     pub start_pc: u16,
     pub length: u16,
     pub name: Cow<'a, str>,
-    pub descriptor: Cow<'a, str>,
+    pub descriptor: FieldType<'a>,
     pub index: u16,
 }
 
@@ -129,7 +130,7 @@ pub enum AnnotationElementValue<'a> {
     BooleanConstant(i32),
     StringConstant(Cow<'a, str>),
     EnumConstant {
-        type_name: Cow<'a, str>,
+        type_name: FieldType<'a>,
         const_name: Cow<'a, str>,
     },
     ClassLiteral {
@@ -147,7 +148,7 @@ pub struct AnnotationElement<'a> {
 
 #[derive(Debug)]
 pub struct Annotation<'a> {
-    pub type_descriptor: Cow<'a, str>,
+    pub type_descriptor: FieldType<'a>,
     pub elements: Vec<AnnotationElement<'a>>,
 }
 
@@ -309,7 +310,7 @@ pub struct ModuleData<'a> {
 #[derive(Debug)]
 pub struct RecordComponentEntry<'a> {
     pub name: Cow<'a, str>,
-    pub descriptor: Cow<'a, str>,
+    pub descriptor: FieldType<'a>,
     pub attributes: Vec<AttributeInfo<'a>>,
 }
 
@@ -601,11 +602,9 @@ fn read_localvariable_data<'a>(
         if !is_unqualified_name(&name) {
             fail!("Invalid unqualified name for variable {}", i);
         }
-        let descriptor =
-            read_cp_utf8(bytes, ix, pool).map_err(|e| err!(e, "descriptor for variable {}", i))?;
-        if !is_field_descriptor(&descriptor) {
-            fail!("Invalid descriptor for variable {}", i);
-        }
+        let descriptor = read_cp_utf8(bytes, ix, pool)
+            .and_then(|descriptor| FieldType::parse(&descriptor))
+            .map_err(|e| err!(e, "descriptor for variable {}", i))?;
         let index = read_u2(bytes, ix)?;
         localvariables.push(LocalVariableEntry {
             start_pc,
@@ -662,10 +661,9 @@ fn read_annotation_element_value<'a>(
         'Z' => AnnotationElementValue::BooleanConstant(read_cp_integer(bytes, ix, pool)?),
         's' => AnnotationElementValue::StringConstant(read_cp_utf8(bytes, ix, pool)?),
         'e' => {
-            let type_name = read_cp_utf8(bytes, ix, pool)?;
-            if !is_field_descriptor(&type_name) {
-                fail!("Invalid enum descriptor");
-            }
+            let type_name = read_cp_utf8(bytes, ix, pool)
+                .and_then(|descriptor| FieldType::parse(&descriptor))
+                .map_err(|e| err!(e, "annotation element value enum descriptor"))?;
             let const_name = read_cp_utf8(bytes, ix, pool)?;
             AnnotationElementValue::EnumConstant {
                 type_name,
@@ -701,11 +699,9 @@ fn read_annotation<'a>(
     ix: &mut usize,
     pool: &[Arc<ConstantPoolEntry<'a>>],
 ) -> Result<Annotation<'a>, ParseError> {
-    let type_descriptor =
-        read_cp_utf8(bytes, ix, pool).map_err(|e| err!(e, "type descriptor field"))?;
-    if !is_field_descriptor(&type_descriptor) {
-        fail!("Invalid descriptor");
-    }
+    let type_descriptor = read_cp_utf8(bytes, ix, pool)
+        .and_then(|descriptor| FieldType::parse(&descriptor))
+        .map_err(|e| err!(e, "type descriptor field"))?;
     let element_count = read_u2(bytes, ix)?;
     let mut elements = Vec::with_capacity(element_count.into());
     for i in 0..element_count {
@@ -774,7 +770,7 @@ fn read_type_annotation_data<'a>(
                 type_parameter_index: read_u1(bytes, ix)?,
                 bound_index: read_u1(bytes, ix)?,
             },
-            0x13 | 0x14 | 0x15 => TypeAnnotationTarget::Empty,
+            0x13..=0x15 => TypeAnnotationTarget::Empty,
             0x16 => TypeAnnotationTarget::FormalParameter {
                 index: read_u1(bytes, ix)?,
             },
@@ -799,10 +795,10 @@ fn read_type_annotation_data<'a>(
             0x42 => TypeAnnotationTarget::Catch {
                 exception_table_index: read_u2(bytes, ix)?,
             },
-            0x43 | 0x44 | 0x45 | 0x46 => TypeAnnotationTarget::Offset {
+            0x43..=0x46 => TypeAnnotationTarget::Offset {
                 offset: read_u2(bytes, ix)?,
             },
-            0x47 | 0x48 | 0x49 | 0x4A | 0x4B => TypeAnnotationTarget::TypeArgument {
+            0x47..=0x4B => TypeAnnotationTarget::TypeArgument {
                 offset: read_u2(bytes, ix)?,
                 type_argument_index: read_u1(bytes, ix)?,
             },
@@ -1039,11 +1035,9 @@ fn read_record_data<'a>(
         if !is_unqualified_name(&name) {
             fail!("Invalid unqualified name for entry {}", i);
         }
-        let descriptor =
-            read_cp_utf8(bytes, ix, pool).map_err(|e| err!(e, "descriptor of entry {}", i))?;
-        if !is_field_descriptor(&descriptor) {
-            fail!("Invalid descriptor for entry {}", i);
-        }
+        let descriptor = read_cp_utf8(bytes, ix, pool)
+            .and_then(|descriptor| FieldType::parse(&descriptor))
+            .map_err(|e| err!(e, "descriptor of entry {}", i))?;
         let attributes =
             read_attributes(bytes, ix, pool, opts).map_err(|e| err!(e, "entry {}", i))?;
         components.push(RecordComponentEntry {
