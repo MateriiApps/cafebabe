@@ -136,6 +136,7 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct FieldInfo<'a> {
+    pub enclosing_class: Cow<'a, str>,
     pub access_flags: FieldAccessFlags,
     pub name: Cow<'a, str>,
     pub descriptor: FieldType<'a>,
@@ -143,6 +144,7 @@ pub struct FieldInfo<'a> {
 }
 
 fn read_fields<'a>(
+    this_class: Cow<'a, str>,
     bytes: &'a [u8],
     ix: &mut usize,
     pool: &[Arc<ConstantPoolEntry<'a>>],
@@ -172,6 +174,7 @@ fn read_fields<'a>(
         let attributes =
             read_attributes(bytes, ix, pool, opts).map_err(|e| err!(e, "class field {}", i))?;
         fields.push(FieldInfo {
+            enclosing_class: this_class.clone(),
             access_flags,
             name,
             descriptor,
@@ -200,6 +203,7 @@ bitflags! {
 
 #[derive(Debug)]
 pub struct MethodInfo<'a> {
+    pub enclosing_class: Cow<'a, str>,
     pub access_flags: MethodAccessFlags,
     pub name: Cow<'a, str>,
     pub descriptor: MethodDescriptor<'a>,
@@ -207,6 +211,7 @@ pub struct MethodInfo<'a> {
 }
 
 fn read_methods<'a>(
+    this_class: Cow<'a, str>,
     bytes: &'a [u8],
     ix: &mut usize,
     pool: &[Arc<ConstantPoolEntry<'a>>],
@@ -250,6 +255,7 @@ fn read_methods<'a>(
         let attributes =
             read_attributes(bytes, ix, pool, opts).map_err(|e| err!(e, "class method {}", i))?;
         methods.push(MethodInfo {
+            enclosing_class: this_class.clone(),
             access_flags,
             name,
             descriptor,
@@ -385,8 +391,9 @@ pub fn parse_class_with_options<'a>(
     let super_class = read_cp_classinfo_opt(raw_bytes, &mut ix, &constant_pool)
         .map_err(|e| err!(e, "super_class"))?;
     let interfaces = read_interfaces(raw_bytes, &mut ix, &constant_pool)?;
-    let fields = read_fields(raw_bytes, &mut ix, &constant_pool, opts)?;
+    let fields = read_fields(this_class.clone(), raw_bytes, &mut ix, &constant_pool, opts)?;
     let methods = read_methods(
+        this_class.clone(),
         raw_bytes,
         &mut ix,
         &constant_pool,
